@@ -73,7 +73,7 @@ def combine_videos(
             end_time = min(start_time + max_clip_duration, clip_duration)
             split_clip = clip.subclipped(start_time, end_time)
             raw_clips.append(split_clip)
-            # logger.info(f"splitting from {start_time:.2f} to {end_time:.2f}, clip duration {clip_duration:.2f}, split_clip duration {split_clip.duration:.2f}")
+            logger.info(f"splitting from {start_time:.2f} to {end_time:.2f}, clip duration {clip_duration:.2f}, split_clip duration {split_clip.duration:.2f}")
             start_time = end_time
             if video_concat_mode.value == VideoConcatMode.sequential.value:
                 break

@@ -15,6 +15,13 @@
     # 特别注意格式，Key 用英文双引号括起来，多个Key用逗号隔开
     pixabay_api_keys = []
 
+    # Youtube API Key
+    # Register at https://pixabay.com/api/docs/ to get your API key.
+    # You can use multiple keys to avoid rate limits.
+    # For example: pixabay_api_keys = ["123adsf4567adf89","abd1321cd13efgfdfhi"]
+    # 特别注意格式，Key 用英文双引号括起来，多个Key用逗号隔开
+    youtube_api_keys = [""]
+
     # 如果你没有 OPENAI API Key，可以使用 g4f 代替，或者使用国内的 Moonshot API
     # If you don't have an OPENAI API Key, you can use g4f instead
 
@@ -44,7 +51,7 @@
 
     ########## Moonshot API Key
     # Visit https://platform.moonshot.cn/console/api-keys to get your API key.
-    moonshot_api_key=""
+    moonshot_api_key="sk-FE3vtg5lk88KHVSQR6E4AqqY9V0IWXBZ8B5QNtXwXgahsf2g"
     moonshot_base_url = "https://api.moonshot.cn/v1"
     moonshot_model_name = "moonshot-v1-8k"
 
@@ -68,8 +75,8 @@
     azure_api_version = "2024-02-15-preview"
 
     ########## Gemini API Key
-    gemini_api_key=""
-    gemini_model_name = "gemini-1.0-pro"
+    gemini_api_key="AIzaSyC6pY8dNSPTt2Fd_cfQIWtmqOSUkZq1Sk0"
+    gemini_model_name = "gemini-2.0-pro"
 
     ########## Qwen API Key
     # Visit https://dashscope.console.aliyun.com/apiKey to get your API key
@@ -98,6 +105,7 @@
     # Download from https://imagemagick.org/archive/binaries/ImageMagick-7.1.1-29-Q16-x64-static.exe
 
     # imagemagick_path = "C:\\Program Files (x86)\\ImageMagick-7.1.1-Q16\\magick.exe"
+    imagemagick_path = "/usr/bin/convert"
 
 
     #
@@ -116,6 +124,7 @@
     # In such cases, you can manually download ffmpeg and set the ffmpeg_path, download link: https://www.gyan.dev/ffmpeg/builds/
 
     # ffmpeg_path = "C:\\Users\\harry\\Downloads\\ffmpeg.exe"
+    ffmpeg_path = "/usr/bin/ffmpeg"
     #########################################################################################
 
     # 当视频生成成功后，API服务提供的视频下载接入点，默认为当前服务的地址和监听端口

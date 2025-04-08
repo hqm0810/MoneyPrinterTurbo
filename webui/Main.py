@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import streamlit as st
 from loguru import logger
-
+sys.path.append("/root/workspace/MoneyPrinterTurbo")
 from app.config import config
 from app.models.const import FILE_TYPE_IMAGES, FILE_TYPE_VIDEOS
 from app.models.schema import MaterialInfo, VideoAspect, VideoConcatMode, VideoParams
@@ -502,6 +502,7 @@ with middle_panel:
         video_sources = [
             (tr("Pexels"), "pexels"),
             (tr("Pixabay"), "pixabay"),
+            (tr("Youtube"), "youtube"),
             (tr("Local file"), "local"),
             (tr("TikTok"), "douyin"),
             (tr("Bilibili"), "bilibili"),
@@ -756,7 +757,7 @@ if start_button:
         scroll_to_bottom()
         st.stop()
 
-    if params.video_source not in ["pexels", "pixabay", "local"]:
+    if params.video_source not in ["pexels", "pixabay", "youtube", "local"]:
         st.error(tr("Please Select a Valid Video Source"))
         scroll_to_bottom()
         st.stop()

@@ -10,6 +10,9 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 from app.config import config
 from app.models.schema import MaterialInfo, VideoAspect, VideoConcatMode
 from app.utils import utils
+from app.utils.youtube_utils import get_youtube_info
+
+import yt_dlp
 
 requested_count = 0
 
@@ -87,6 +90,67 @@ def search_videos_pexels(
 
     return []
 
+def search_videos_youtube(
+    search_term: str,
+    minimum_duration: int,
+    video_aspect: VideoAspect = VideoAspect.portrait,
+) -> List[MaterialInfo]:
+    aspect = VideoAspect(video_aspect)
+    video_width, video_height = aspect.to_resolution()
+
+    api_key = get_api_key("youtube_api_keys")
+    
+    query_url = "https://www.googleapis.com/youtube/v3/search"
+    
+    params = {
+        "part": "id,snippet",
+        "q": search_term,
+        "type": "video",
+        "maxResults": 50,
+        "key": api_key
+    }
+
+    proxy = None
+    if config.proxy:
+        proxy = config.proxy['http']
+    
+    logger.info(f"searching videos: {query_url}, with proxies: {config.proxy}")
+
+
+    try:
+        response = requests.get(
+            query_url, params=params, proxies=config.proxy, verify=False, timeout=(30, 60))
+        
+        response_data = response.json()
+
+        video_items = []
+
+        for item in response_data["items"]:
+            video_id = item["id"]["videoId"]
+            # title = item["snippet"]["title"]
+
+            url = f"https://www.youtube.com/watch?v={video_id}"
+
+            # video_info = get_youtube_info(url, proxy)
+
+            # w = int(video_info["width"])
+            # # h = int(video_info["height"])
+            # duration = video_info["duration"]
+
+            # if w >= video_width:
+            item = MaterialInfo()
+            item.provider = "youtube"
+            item.url = url
+            item.duration = 0
+            # item.duration = duration
+            video_items.append(item)
+
+        return video_items       
+
+    except Exception as e:
+        logger.error(f"search videos failed: {str(e)}")
+    
+    return []
 
 def search_videos_pixabay(
     search_term: str,
@@ -143,23 +207,7 @@ def search_videos_pixabay(
 
     return []
 
-
-def save_video(video_url: str, save_dir: str = "") -> str:
-    if not save_dir:
-        save_dir = utils.storage_dir("cache_videos")
-
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-
-    url_without_query = video_url.split("?")[0]
-    url_hash = utils.md5(url_without_query)
-    video_id = f"vid-{url_hash}"
-    video_path = f"{save_dir}/{video_id}.mp4"
-
-    # if video already exists, return the path
-    if os.path.exists(video_path) and os.path.getsize(video_path) > 0:
-        logger.info(f"video already exists: {video_path}")
-        return video_path
+def common_video_downloader(video_url, video_path):
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
@@ -176,6 +224,47 @@ def save_video(video_url: str, save_dir: str = "") -> str:
                 timeout=(60, 240),
             ).content
         )
+
+def youtube_video_downloader(video_url, video_path):
+    ### auto suffix
+    video_path = video_path[:-4]
+
+    ydl_opts = {
+        "outtmpl": video_path,  # 文件保存路径
+        "format": "bestvideo+bestaudio/best",  # 下载最佳质量的视频和音频
+        "postprocessors": [
+            {
+                "key": "FFmpegVideoConvertor",
+                "preferedformat": "mp4"  # 转换为 mp4 格式
+            }
+        ],
+    }
+
+    if config.proxy:
+        ydl_opts["proxy"] = config.proxy['http']
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([video_url])
+
+def save_video(video_url: str, save_dir: str = "", video_downloader=common_video_downloader) -> str:
+    if not save_dir:
+        save_dir = utils.storage_dir("cache_videos")
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    url_without_query = video_url.split("?")[0]
+    url_hash = utils.md5(url_without_query)
+    video_id = f"vid-{url_hash}"
+    video_path = f"{save_dir}/{video_id}.mp4"
+
+    # if video already exists, return the path
+    if os.path.exists(video_path) and os.path.getsize(video_path) > 0:
+        logger.info(f"video already exists: {video_path}")
+        return video_path
+
+    video_downloader(video_url, video_path)
+    
 
     if os.path.exists(video_path) and os.path.getsize(video_path) > 0:
         try:
@@ -206,9 +295,15 @@ def download_videos(
     valid_video_items = []
     valid_video_urls = []
     found_duration = 0.0
-    search_videos = search_videos_pexels
+
     if source == "pixabay":
         search_videos = search_videos_pixabay
+    elif source == "pexels":
+        search_videos = search_videos_pexels
+    elif source == 'youtube':
+        search_videos = search_videos_youtube
+    else:
+        raise NotImplementedError("Invalid Paras")
 
     for search_term in search_terms:
         video_items = search_videos(
@@ -242,9 +337,19 @@ def download_videos(
     for item in valid_video_items:
         try:
             logger.info(f"downloading video: {item.url}")
-            saved_video_path = save_video(
-                video_url=item.url, save_dir=material_directory
-            )
+            
+            if item.provider == "youtube":
+                saved_video_path = save_video(
+                    video_url=item.url, save_dir=material_directory, video_downloader=youtube_video_downloader
+                )
+            else:
+                saved_video_path = save_video(
+                    video_url=item.url, save_dir=material_directory
+                )
+
+            clip = VideoFileClip(saved_video_path)
+            item.duration = clip.duration
+
             if saved_video_path:
                 logger.info(f"video saved: {saved_video_path}")
                 video_paths.append(saved_video_path)
@@ -263,5 +368,6 @@ def download_videos(
 
 if __name__ == "__main__":
     download_videos(
-        "test123", ["Money Exchange Medium"], audio_duration=100, source="pixabay"
+        "test123", ["Money Exchange Medium"], audio_duration=100, source="youtube"
     )
+    
